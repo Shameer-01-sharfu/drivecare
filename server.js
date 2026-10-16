@@ -92,7 +92,7 @@ function migrate(raw) {
   return db;
 }
 
-function readDB() {
+function readFileDB() {
   let text;
   try {
     text = fs.readFileSync(DB_FILE, 'utf8');
@@ -109,10 +109,43 @@ function readDB() {
   }
 }
 
-function writeDB(db) {
+function writeFileDB(db) {
   const tmp = DB_FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
   fs.renameSync(tmp, DB_FILE);              // atomic swap, so a crash can't leave half a file
+}
+
+/* ---------- storage: MongoDB Atlas when MONGODB_URI is set, otherwise the JSON file ----------
+   In Mongo mode the database lives in memory and is saved to Atlas (one document) after every change. */
+const MONGODB_URI = process.env.MONGODB_URI || '';
+let mongoCol = null;
+let cache = null;
+let saveChain = Promise.resolve();
+
+async function initStorage() {
+  if (!MONGODB_URI) { console.log('Storage: JSON file (' + DB_FILE + ') - set MONGODB_URI to use MongoDB Atlas'); return; }
+  const { MongoClient } = require('mongodb');
+  const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
+  await client.connect();
+  mongoCol = client.db(process.env.MONGODB_DB || 'drivecare').collection('state');
+  const doc = await mongoCol.findOne({ _id: 'main' });
+  if (doc) { delete doc._id; cache = migrate(doc); }
+  else {                                     // first run: import bookings.json if there is one
+    cache = readFileDB();
+    await mongoCol.replaceOne({ _id: 'main' }, { _id: 'main', ...cache }, { upsert: true });
+  }
+  console.log('Storage: MongoDB Atlas');
+}
+function readDB() {                          // always a copy, so a half-finished request never changes stored data
+  return mongoCol ? JSON.parse(JSON.stringify(cache)) : readFileDB();
+}
+function writeDB(db) {
+  if (!mongoCol) return writeFileDB(db);
+  cache = db;
+  const snapshot = { _id: 'main', ...JSON.parse(JSON.stringify(db)) };
+  saveChain = saveChain
+    .then(() => mongoCol.replaceOne({ _id: 'main' }, snapshot, { upsert: true }))
+    .catch(e => console.error('MongoDB save failed:', e.message));
 }
 
 function getBooking(db, id) {
@@ -517,7 +550,7 @@ function getLocalIp() {
   return 'localhost';
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+initStorage().then(() => app.listen(PORT, '0.0.0.0', () => {
   const ip = getLocalIp();
   console.log('\nDriveCare is running!\n');
   console.log(`  Customer app : http://localhost:${PORT}`);
@@ -527,4 +560,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('  ⚠  Admin password is the default "admin123".');
     console.log('     Set ADMIN_PASSWORD in a .env file (see .env.example) before sharing the app.\n');
   }
-});
+})).catch(e => { console.error('Could not start the server:', e.message); process.exit(1); });
