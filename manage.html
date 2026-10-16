@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriveCare — Parts &amp; Super Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0F24;--panel:#121A3A;--panel2:#1B2552;--paper:#F4F6FF;--dim:#B4BEE0;--org:#FF7A1A;--teal:#2DE0B8;--line:#2A3566;--red:#FF5C5C}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 0 -10%,rgba(255,122,26,.2),transparent 60%),var(--bg);color:var(--paper);font-family:Inter,sans-serif}
+.top{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line)}
+.top h1{font-family:Rajdhani,sans-serif;margin:0;font-size:22px;letter-spacing:2px}.top h1 span{color:var(--org)}
+.wrap{max-width:1000px;margin:0 auto;padding:22px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+button,.lnk{background:linear-gradient(135deg,#FF9A3D,#E85D04);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:none}
+button.g{background:transparent;border:1px solid var(--line);color:var(--dim)}button.g.on{border-color:var(--teal);color:var(--teal)}button.d{background:transparent;border:1px solid var(--red);color:var(--red)}
+input{background:var(--panel2);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:9px 11px;font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.row input{flex:1;min-width:120px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}th{color:var(--dim);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.low{color:var(--red);font-weight:700}.big{font-family:Rajdhani,sans-serif;font-size:34px;color:var(--teal)}h2{font-family:Rajdhani,sans-serif;margin:0 0 14px}
+.login{max-width:340px;margin:12vh auto}.login input{width:100%;margin:10px 0}.err{color:var(--red);font-size:12.5px;min-height:18px}
+</style></head><body>
+<div id="login" class="login card" style="display:none"><h2>DriveCare <span style="color:var(--org)">Manage</span></h2>
+<div style="color:var(--dim);font-size:13px">Admin or Super Admin password</div><input id="pw" type="password" placeholder="Password"><div class="err" id="err"></div><button onclick="doLogin()" style="width:100%">Log in</button></div>
+<div id="app" style="display:none"><div class="top"><h1>DriveCare <span>Manage</span></h1><div><a class="lnk" href="/admin">Bookings dashboard</a> <button class="g" onclick="logout()">Log out</button></div></div>
+<div class="wrap"><div class="tabs" id="tabs"></div><div class="card" id="view"></div></div></div>
+<script>
+const KEY='drivecare_admin_token';let token=sessionStorage.getItem(KEY)||'',role='',tab='products',editId='';
+const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=n=>'₹'+Number(n||0).toLocaleString('en-IN'),isSuper=()=>role==='super';
+const ld=d=>(d||new Date()).toLocaleDateString('en-CA');
+async function api(u,m,b){const r=await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:b?JSON.stringify(b):undefined});
+ if(r.status===401){logout();throw new Error('login')}const d=await r.json().catch(()=>null);if(!r.ok)throw new Error((d&&d.error)||'Failed');return d}
+const run=async f=>{try{await f()}catch(e){if(e.message!=='login')alert(e.message)}};
+async function doLogin(){const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pw').value})});
+ const d=await r.json().catch(()=>({}));if(!r.ok){$('err').textContent=d.error||'Login failed';return}token=d.token;sessionStorage.setItem(KEY,token);start()}
+function logout(){token='';sessionStorage.removeItem(KEY);$('app').style.display='none';$('login').style.display='block'}
+function start(){try{role=JSON.parse(atob(token.split('.')[1])).role}catch(e){return logout()}
+ $('login').style.display='none';$('app').style.display='block';
+ const T=[['products','Products & Stock'],...(isSuper()?[['workers','Workers'],['attendance','Attendance'],['salary','Salary'],['turnover','Daily Turnover']]:[])];
+ $('tabs').innerHTML=T.map(t=>`<button class="g ${t[0]===tab?'on':''}" onclick="tab='${t[0]}';start()">${t[1]}</button>`).join('')+(isSuper()?'':'<span style="color:var(--dim);font-size:12px;align-self:center">Log in with the Super Admin password for stock, workers, salary &amp; turnover.</span>');
+ if(!T.some(t=>t[0]===tab))tab='products';run(views[tab])}
+const views={
+ async products(){const ps=await api('/api/parts');$('view').innerHTML=`<h2>Products &amp; stock</h2><div class="row"><input id="pn" placeholder="Part name"><input id="pp" type="number" placeholder="Price ₹">${isSuper()?'<input id="ps" type="number" placeholder="Opening stock">':''}<button onclick="addPart()">+ Add product</button></div>
+ <table><tr><th>Part</th><th>Price</th><th>Stock</th><th></th></tr>${ps.map(p=>p.id===editId?`<tr><td><input id="en" value="${esc(p.name)}"></td><td><input id="ep" type="number" value="${p.price}" style="width:100px"></td><td>${isSuper()?`<input id="es" type="number" value="${p.stock}" style="width:80px">`:p.stock}</td><td><button onclick="saveEdit('${p.id}')">Save</button> <button class="g" onclick="editId='';views.products()">Cancel</button></td></tr>`:`<tr><td>${esc(p.name)}</td><td>${inr(p.price)}</td><td class="${p.stock<3?'low':''}">${p.stock}${p.stock<3?' (low)':''}</td><td><button class="g" onclick="editId='${p.id}';views.products()">✏️ Edit</button>${isSuper()?` <button class="g" onclick="addStock('${p.id}')">± Stock</button>`:''} <button class="d" onclick="delPart('${p.id}')">Delete</button></td></tr>`).join('')}</table><p style="color:var(--dim);font-size:12px">Stock goes down automatically when a part is added to a job and comes back if the part is removed or the booking is cancelled.</p>`},
+ async workers(){const ws=await api('/api/super/workers');$('view').innerHTML=`<h2>Worker details</h2><div class="row"><input id="wn" placeholder="Name"><input id="wp" placeholder="Phone"><input id="wr" placeholder="Role (Mechanic…)"><input id="ws" type="number" placeholder="Monthly salary ₹"><button onclick="addWorker()">+ Add worker</button></div>
+ <table><tr><th>Name</th><th>Phone</th><th>Role</th><th>Salary / month</th><th>Joined</th><th></th></tr>${ws.map(w=>`<tr><td>${esc(w.name)}</td><td>${esc(w.phone)}</td><td>${esc(w.role)}</td><td>${inr(w.salary)}</td><td>${esc(w.joined)}</td><td><button class="d" onclick="delWorker('${w.id}')">Remove</button></td></tr>`).join('')}</table>`},
+ async attendance(){const d=window.attDate||ld();window.attDate=d;const[ws,at]=await Promise.all([api('/api/super/workers'),api('/api/super/attendance?date='+d)]);
+ $('view').innerHTML=`<h2>Attendance</h2><div class="row"><input type="date" value="${d}" onchange="attDate=this.value;views.attendance()"></div><table><tr><th>Worker</th><th>Mark</th></tr>${ws.map(w=>`<tr><td>${esc(w.name)}</td><td>${[['P','Present'],['H','Half day'],['A','Absent']].map(s=>`<button class="g ${at[w.id]===s[0]?'on':''}" onclick="mark('${w.id}','${s[0]}')">${s[1]}</button>`).join(' ')}</td></tr>`).join('')||'<tr><td>Add workers first.</td></tr>'}</table>`},
+ async salary(){const m=window.salMonth||ld().slice(0,7);window.salMonth=m;const rs=await api('/api/super/salary?month='+m);
+ $('view').innerHTML=`<h2>Salary</h2><div class="row"><input type="month" value="${m}" onchange="salMonth=this.value;views.salary()"></div><table><tr><th>Worker</th><th>Monthly</th><th>Present</th><th>Half</th><th>Due</th><th>Paid</th><th>Balance</th><th></th></tr>${rs.map(r=>`<tr><td>${esc(r.name)}</td><td>${inr(r.salary)}</td><td>${r.present}</td><td>${r.half}</td><td>${inr(r.due)}</td><td>${inr(r.paid)}</td><td>${inr(r.balance)}</td><td>${r.balance>0?`<button onclick="pay('${r.workerId}',${r.balance})">Pay ${inr(r.balance)}</button>`:'✓'}</td></tr>`).join('')}</table><p style="color:var(--dim);font-size:12px">Due = monthly salary ÷ 30 × (present days + half days ÷ 2)</p>`},
+ async turnover(){const t=await api('/api/super/turnover');const td=t.days.find(x=>x.date===t.today)||{turnover:0,invoices:0};
+ $('view').innerHTML=`<h2>Daily turnover</h2><div class="row" style="align-items:center"><div><div style="color:var(--dim);font-size:12px">TODAY</div><div class="big">${inr(td.turnover)}</div><div style="color:var(--dim);font-size:12px">${td.invoices} paid invoice(s)</div></div></div><table><tr><th>Date</th><th>Invoices</th><th>Turnover</th></tr>${t.days.map(x=>`<tr><td>${x.date}</td><td>${x.invoices}</td><td>${inr(x.turnover)}</td></tr>`).join('')||'<tr><td colspan="3">No paid invoices yet.</td></tr>'}</table>`}};
+const addPart=()=>run(async()=>{await api('/api/parts','POST',{name:$('pn').value,price:$('pp').value,stock:$('ps')?$('ps').value:0});views.products()});
+const saveEdit=id=>run(async()=>{const b={name:$('en').value,price:$('ep').value};if($('es'))b.stock=$('es').value;await api('/api/parts/'+id,'PUT',b);editId='';views.products()});
+const addStock=id=>{const v=prompt('Add stock (use a minus number to reduce)','10');if(v)run(async()=>{await api('/api/parts/'+id+'/stock','POST',{add:v});views.products()})};
+const delPart=id=>{if(confirm('Delete this product?'))run(async()=>{await api('/api/parts/'+id,'DELETE');views.products()})};
+const addWorker=()=>run(async()=>{await api('/api/super/workers','POST',{name:$('wn').value,phone:$('wp').value,role:$('wr').value,salary:$('ws').value});views.workers()});
+const delWorker=id=>{if(confirm('Remove this worker?'))run(async()=>{await api('/api/super/workers/'+id,'DELETE');views.workers()})};
+const mark=(id,s)=>run(async()=>{await api('/api/super/attendance','POST',{workerId:id,date:window.attDate,status:s});views.attendance()});
+const pay=(id,a)=>{if(confirm('Record salary payment of '+inr(a)+'?'))run(async()=>{await api('/api/super/salary/pay','POST',{workerId:id,month:window.salMonth,amount:a});views.salary()})};
+if(token)start();else logout();
+</script></body></html>

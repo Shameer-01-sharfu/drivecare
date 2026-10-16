@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DriveCare — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt:#0A0F24; --panel:#121A3A; --panel-light:#1B2552;
+    --paper:#F4F6FF; --paper-dim:#B4BEE0; --amber:#FF7A1A;
+    --teal:#2DE0B8; --muted:#8793BD; --line:#2A3566; --red:#FF5C5C; --gold:#F2B84B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--asphalt);color:var(--paper);font-family:'Inter',sans-serif;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--line);background:var(--panel);gap:12px;}
+  .topbar h1{font-family:'Rajdhani',sans-serif;font-size:22px;letter-spacing:2px;margin:0;}
+  .topbar .right{display:flex;align-items:center;gap:14px;}
+  .topbar span.sub{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px;}
+  .empty{text-align:center;color:var(--muted);padding:60px 0;font-size:14px;}
+  .conn-note{display:none;background:rgba(225,72,63,.12);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:14px;}
+
+  /* login */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:30px 28px;}
+  .login-card h1{font-family:'Rajdhani',sans-serif;font-size:26px;letter-spacing:2px;margin:0 0 6px;}
+  .login-card p{margin:0 0 20px;color:var(--muted);font-size:13px;}
+  .login-card input{width:100%;background:var(--panel-light);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:11px 12px;font-size:14px;font-family:'Inter',sans-serif;margin-bottom:12px;}
+  .login-card .btn{width:100%;padding:11px;}
+  .login-error{color:var(--red);font-size:12.5px;min-height:18px;margin:-4px 0 8px;}
+
+  /* buttons */
+  .btn{
+    padding:9px 16px;border-radius:8px;border:none;background:var(--amber);color:#fff;
+    font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .btn:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+  .btn:hover:not(:disabled){background:#FF9A3D;}
+  .btn-teal{background:var(--teal);color:#07231c;}
+  .btn-teal:hover:not(:disabled){background:#54e0bd;}
+  .btn-ghost{background:transparent;color:var(--paper-dim);border:1px solid var(--line);}
+  .btn-ghost:hover:not(:disabled){background:transparent;border-color:var(--paper-dim);color:var(--paper);}
+  .btn-danger{background:transparent;color:var(--red);border:1px solid var(--red);}
+  .btn-danger:hover:not(:disabled){background:var(--red);color:#fff;}
+
+  /* dashboard cards */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .stat .label{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+  .stat .value{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;line-height:1.1;}
+  .stat .note{font-size:11.5px;color:var(--paper-dim);margin-top:4px;}
+  .stat.money .value{color:var(--teal);}
+  .stat.warn .value{color:var(--gold);}
+  .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:22px;}
+  .chart-card .label{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
+  .bars{display:flex;align-items:flex-end;gap:10px;height:120px;}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;}
+  .bar{width:100%;max-width:46px;background:linear-gradient(180deg,var(--teal),#2a8f78);border-radius:6px 6px 0 0;min-height:2px;}
+  .bar-val{font-size:10.5px;color:var(--paper-dim);margin-bottom:4px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+  .bar-day{font-size:11px;color:var(--muted);margin-top:6px;}
+
+  /* filters */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px;}
+  .filters input,.filters select{
+    background:var(--panel-light);border:1px solid var(--line);color:var(--paper);border-radius:8px;
+    padding:9px 11px;font-size:12.5px;font-family:'Inter',sans-serif;
+  }
+  .filters input{flex:1;min-width:200px;}
+  .result-count{font-size:12px;color:var(--muted);margin:0 0 14px;}
+
+  /* booking cards */
+  .card{
+    border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:20px 22px;margin-bottom:16px;
+  }
+  .card.cancelled{opacity:.7;}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .card .info h3{font-family:'Rajdhani',sans-serif;font-size:18px;margin:0 0 4px;font-weight:700;}
+  .card .info p{margin:2px 0;font-size:12.5px;color:var(--paper-dim);}
+  .card .info .id{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .stagebox{text-align:right;}
+  .stage-pill{
+    display:inline-block;padding:5px 12px;border-radius:20px;font-size:11.5px;font-weight:600;
+    border:1px solid var(--line);color:var(--paper-dim);margin-bottom:10px;
+  }
+  .stage-pill.final{border-color:var(--teal);color:var(--teal);}
+  .stage-pill.cancelled{border-color:var(--red);color:var(--red);}
+  .refresh-note{text-align:center;color:var(--muted);font-size:11.5px;margin-top:18px;letter-spacing:1px;}
+
+  .section{border-top:1px dashed var(--line);padding-top:14px;margin-top:14px;}
+  .section-title{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
+  .item-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px dotted var(--line);}
+  .item-row .tag{font-size:10.5px;color:var(--muted);margin-left:6px;}
+  .item-row .rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;}
+  .item-row .rm:hover{color:var(--red);}
+  .item-form{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .item-form input, .item-form select{
+    background:var(--panel-light);border:1px solid var(--line);color:var(--paper);border-radius:6px;
+    padding:8px 10px;font-size:12.5px;font-family:'Inter',sans-serif;
+  }
+  .item-form input[name="iname"]{flex:2;min-width:140px;}
+  .item-form input[name="iamount"]{flex:1;min-width:80px;}
+  .item-total{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber);margin-top:10px;text-align:right;}
+
+  .pay-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .pay-status{font-size:12.5px;color:var(--paper-dim);}
+  .pay-status.pending{color:var(--gold);}
+  .pay-status.confirmed{color:var(--teal);}
+  .fb-stars{color:var(--gold);letter-spacing:2px;font-size:15px;}
+  .fb-text{font-size:12.5px;color:var(--paper-dim);margin-top:4px;font-style:italic;}
+  .card-foot{display:flex;justify-content:flex-end;margin-top:16px;}
+
+  @media(max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .wrap{padding:18px;}
+    .topbar{padding:14px 18px;}
+  }
+
+  /* ---- v2.1 visual polish (look only, no logic changes) ---- */
+  @media screen{
+    body{background:radial-gradient(900px 500px at 0% -10%,rgba(255,122,26,.20),transparent 60%),radial-gradient(800px 450px at 100% 0%,rgba(45,224,184,.13),transparent 55%),var(--asphalt);background-attachment:fixed;}
+    .topbar{position:sticky;top:0;z-index:10;backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,.3);}
+    .stat{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--panel-light),var(--panel));border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.22);transition:transform .25s,box-shadow .25s;}
+    .stat::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--amber),var(--teal));}
+    .stat:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.35);}
+    .chart-card,.card{background:linear-gradient(160deg,var(--panel-light),var(--panel));border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.2);}
+    .card{transition:border-color .25s,box-shadow .25s;}
+    .card:hover{border-color:var(--teal);box-shadow:0 14px 30px rgba(0,0,0,.32);}
+    .bar{box-shadow:0 0 14px rgba(45,224,184,.45);transition:height .6s ease;}
+    .btn{box-shadow:0 4px 12px rgba(0,0,0,.2);transition:transform .2s,box-shadow .2s,background .2s;}
+    .btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.3);}
+    .stage-pill.final{box-shadow:0 0 14px rgba(45,224,184,.3);}
+    .filters input:focus,.filters select:focus,.item-form input:focus,.item-form select:focus,.login-card input:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 3px rgba(45,224,184,.2);}
+    .login-card{border-top:3px solid var(--amber);box-shadow:0 24px 60px rgba(0,0,0,.45);}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+
+  /* ---- v3 theme: new palette, hero banner, icon badges, background pattern ---- */
+  @media screen{
+    body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='14' fill='none' stroke='%23fff' stroke-width='2' stroke-dasharray='6 5'/%3E%3C/svg%3E");}
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:26px 30px;margin-bottom:24px;border-radius:20px;position:relative;overflow:hidden;border:1px solid var(--line);box-shadow:0 18px 44px rgba(0,0,0,.35);background:linear-gradient(120deg,rgba(255,122,26,.30),rgba(45,224,184,.16) 60%,rgba(27,37,82,.5)),var(--panel);}
+    .hero h1{font-family:'Rajdhani',sans-serif;font-size:32px;line-height:1.1;margin:8px 0 6px;}
+    .hero p{margin:0;color:var(--paper-dim);font-size:13.5px;}
+    .hero-tag{font-size:10.5px;letter-spacing:2px;color:var(--teal);font-weight:600;}
+    .hero-art{flex:0 0 250px;}
+    .hero-art svg{width:100%;height:auto;filter:drop-shadow(0 14px 20px rgba(0,0,0,.45));animation:dcFloat 4s ease-in-out infinite;}
+    @keyframes dcFloat{50%{transform:translateY(-7px);}}
+    .choice-card .icon{width:58px;height:58px;display:grid;place-items:center;font-size:30px;border-radius:16px;margin-bottom:12px;background:linear-gradient(135deg,rgba(255,122,26,.28),rgba(45,224,184,.22));border:1px solid rgba(255,255,255,.08);}
+  }
+  @media(max-width:640px){.hero{flex-direction:column;text-align:center;padding:22px;}.hero-art{flex-basis:auto;width:210px;}.hero h1{font-size:26px;}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginView" class="login-wrap" style="display:none;">
+  <div class="login-card">
+    <h1>DriveCare <span style="color:var(--amber)">Admin</span></h1>
+    <p>Sign in to manage bookings, bills and payments.</p>
+    <input type="password" id="adminPassword" placeholder="Admin password" autocomplete="current-password">
+    <div class="login-error" id="loginError"></div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">Log in</button>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD ============ -->
+<div id="appView" style="display:none;">
+  <div class="topbar">
+    <h1>DriveCare <span style="color:var(--amber)">Admin</span></h1>
+    <div class="right">
+      <span class="sub">Workshop Dashboard</span>
+      <a class="btn btn-ghost" href="/manage" style="text-decoration:none;">Parts &amp; Super Admin</a>
+      <button class="btn btn-ghost" onclick="logout()">Log out</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="hero"><div class="hero-text"><span class="hero-tag">WORKSHOP CONTROL ROOM</span><h1>Everything in one dashboard</h1><p>Bookings · Bills · Payments · Customer feedback</p></div><div class="hero-art"><svg viewBox="0 0 360 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="hg" x1="0" x2="1"><stop offset="0" stop-color="#FF9A3D"/><stop offset="1" stop-color="#E8590C"/></linearGradient></defs><ellipse cx="180" cy="148" rx="150" ry="8" fill="#000" opacity=".25"/><path d="M40 112c0-14 8-20 22-24l34-30c8-7 18-10 30-10h70c14 0 24 4 34 12l30 24c26 2 40 8 40 26v10c0 6-4 10-10 10h-12a28 28 0 0 0-56 0H134a28 28 0 0 0-56 0H50c-6 0-10-4-10-10z" fill="url(#hg)"/><path d="M110 62l22-18c6-5 12-6 22-6h40c8 0 14 2 20 7l22 17z" fill="#CFE9FF" opacity=".85"/><circle cx="106" cy="126" r="22" fill="#0A0F24"/><circle cx="106" cy="126" r="10" fill="#B4BEE0"/><circle cx="262" cy="126" r="22" fill="#0A0F24"/><circle cx="262" cy="126" r="10" fill="#B4BEE0"/><g fill="#2DE0B8"><circle cx="322" cy="30" r="4"/><circle cx="30" cy="40" r="3"/><path d="M300 60l4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/></g></svg></div></div>
+        <div class="conn-note" id="connNote">Could not reach the server — showing the last data we had.</div>
+
+    <div class="stats" id="stats"></div>
+    <div class="chart-card">
+      <div class="label">Revenue — last 7 days</div>
+      <div class="bars" id="bars"></div>
+    </div>
+
+    <div class="filters">
+      <input type="search" id="fSearch" placeholder="Search name, vehicle no, phone, ticket or service…">
+      <select id="fStage">
+        <option value="all">All stages</option>
+        <option value="0">Appointment booked</option>
+        <option value="1">Vehicle received</option>
+        <option value="2">In service</option>
+        <option value="3">Service completed</option>
+      </select>
+      <select id="fPay">
+        <option value="all">All payments</option>
+        <option value="unpaid">Unpaid</option>
+        <option value="pending">Payment requested</option>
+        <option value="confirmed">Paid</option>
+      </select>
+      <select id="fStatus">
+        <option value="all">Active + cancelled</option>
+        <option value="active">Active only</option>
+        <option value="cancelled">Cancelled only</option>
+      </select>
+      <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+    </div>
+    <p class="result-count" id="resultCount"></p>
+
+    <div id="list"></div>
+    <div class="refresh-note">Auto-refreshing every 4 seconds · customer screens update automatically</div>
+  </div>
+</div>
+
+<script>
+const STAGES = ['Appointment booked','Vehicle received','In service','Service completed'];
+const TOKEN_KEY = 'drivecare_admin_token';
+
+let token = '';
+try{ token = sessionStorage.getItem(TOKEN_KEY) || ''; }catch(e){}
+let allBookings = [];
+let PARTS = [];
+const pickedPart = {};
+let pollTimer = null;
+let savedFormState = {};
+
+const $ = id => document.getElementById(id);
+
+/* escape anything that came from a customer or from the shop before it goes into innerHTML */
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function payLabel(b){ return (b.paymentMethod || '—') + (b.cardLast4 ? ' •••• ' + b.cardLast4 + (b.cardHolder ? ' (' + b.cardHolder + ')' : '') : ''); }
+function money(n){ return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+function localDateStr(d){
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+/* ---------------- auth + api ---------------- */
+function showLogin(msg){
+  $('appView').style.display = 'none';
+  $('loginView').style.display = 'flex';
+  $('loginError').textContent = msg || '';
+  $('adminPassword').value = '';
+  setTimeout(()=>$('adminPassword').focus(), 50);
+}
+function showApp(){
+  $('loginView').style.display = 'none';
+  $('appView').style.display = 'block';
+}
+function logout(message){
+  token = '';
+  try{ sessionStorage.removeItem(TOKEN_KEY); }catch(e){}
+  if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  allBookings = [];
+  showLogin(typeof message === 'string' ? message : '');
+}
+
+async function doLogin(){
+  const pw = $('adminPassword').value;
+  const btn = $('loginBtn');
+  if(!pw){ $('loginError').textContent = 'Enter the admin password.'; return; }
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/admin/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json().catch(()=>null);
+    if(!res.ok){ $('loginError').textContent = (data && data.error) || 'Login failed.'; return; }
+    token = data.token;
+    try{ sessionStorage.setItem(TOKEN_KEY, token); }catch(e){}
+    startApp();
+  }catch(e){
+    $('loginError').textContent = 'Could not reach the server.';
+  }finally{
+    btn.disabled = false;
+  }
+}
+$('adminPassword').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+
+async function api(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+  if(token) headers.Authorization = 'Bearer ' + token;
+  const res = await fetch(path, Object.assign({}, opts, { headers }));
+  if(res.status === 401){
+    logout('Session expired — please log in again.');
+    throw new Error('unauthorized');
+  }
+  const data = await res.json().catch(()=>null);
+  if(!res.ok){
+    const err = new Error((data && data.error) || 'Request failed');
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+const postApi = (path, body) => api(path, { method:'POST', body: JSON.stringify(body || {}) });
+
+/* run an admin action; show server messages (e.g. "bill already paid") instead of failing silently */
+async function act(fn){
+  try{ await fn(); }
+  catch(e){ if(e.message !== 'unauthorized') alert(e.message); }
+  if(token) loadBookings();
+}
+
+/* ---------------- filters ---------------- */
+const filters = { q:'', stage:'all', pay:'all', status:'all' };
+$('fSearch').addEventListener('input', e => { filters.q = e.target.value; render(); });
+$('fStage').addEventListener('change', e => { filters.stage = e.target.value; render(); });
+$('fPay').addEventListener('change', e => { filters.pay = e.target.value; render(); });
+$('fStatus').addEventListener('change', e => { filters.status = e.target.value; render(); });
+function clearFilters(){
+  filters.q = ''; filters.stage = 'all'; filters.pay = 'all'; filters.status = 'all';
+  $('fSearch').value = ''; $('fStage').value = 'all'; $('fPay').value = 'all'; $('fStatus').value = 'all';
+  render();
+}
+function matches(b){
+  const q = filters.q.trim().toLowerCase();
+  if(q){
+    const hay = [b.name, b.vehicleNo, b.phone, b.id, b.serviceType].join(' ').toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  if(filters.stage !== 'all' && String(b.stage ?? 0) !== filters.stage) return false;
+  if(filters.pay !== 'all' && (b.paymentStatus || 'unpaid') !== filters.pay) return false;
+  if(filters.status === 'active' && b.status === 'cancelled') return false;
+  if(filters.status === 'cancelled' && b.status !== 'cancelled') return false;
+  return true;
+}
+
+/* ---------------- form state (so the 4-second refresh doesn't wipe what you're typing) ---------------- */
+function captureFormState(){
+  savedFormState = {};
+  document.querySelectorAll('[id^="iname-"]').forEach(nameEl=>{
+    const id = nameEl.id.slice('iname-'.length);
+    const amtEl = $('iamount-'+id);
+    const typeEl = $('itype-'+id);
+    savedFormState[id] = {
+      name: nameEl.value,
+      amount: amtEl ? amtEl.value : '',
+      type: typeEl ? typeEl.value : 'service'
+    };
+  });
+  const active = document.activeElement;
+  savedFormState._activeId = (active && active.id) ? active.id : null;
+  if(active && typeof active.selectionStart === 'number'){
+    savedFormState._selStart = active.selectionStart;
+    savedFormState._selEnd = active.selectionEnd;
+  }
+}
+function restoreFormState(){
+  Object.keys(savedFormState).forEach(id=>{
+    if(id.startsWith('_')) return;
+    const s = savedFormState[id];
+    const nameEl = $('iname-'+id), amtEl = $('iamount-'+id), typeEl = $('itype-'+id);
+    if(nameEl && s.name) nameEl.value = s.name;
+    if(amtEl && s.amount) amtEl.value = s.amount;
+    if(typeEl && s.type) typeEl.value = s.type;
+  });
+  if(savedFormState._activeId){
+    const el = $(savedFormState._activeId);
+    if(el){
+      el.focus();
+      if(typeof savedFormState._selStart === 'number' && el.setSelectionRange){
+        try{ el.setSelectionRange(savedFormState._selStart, savedFormState._selEnd); }catch(e){}
+      }
+    }
+  }
+}
+
+/* ---------------- data ---------------- */
+async function loadBookings(){
+  try{
+    try{ PARTS = await (await fetch('/api/parts')).json(); }catch(e){}
+    const data = await api('/api/bookings');
+    allBookings = Array.isArray(data) ? data : [];
+    $('connNote').style.display = 'none';
+    captureFormState();
+    renderStats();
+    render();
+    restoreFormState();
+  }catch(e){
+    if(e.message !== 'unauthorized') $('connNote').style.display = 'block';
+  }
+}
+
+function startApp(){
+  showApp();
+  loadBookings();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(loadBookings, 4000);
+}
+
+/* ---------------- dashboard ---------------- */
+const paidAmt = b => (b.paidAmount != null ? b.paidAmount : (b.bill ? b.bill.total : 0));
+
+function renderStats(){
+  const today = localDateStr();
+  const live = allBookings.filter(b => b.status !== 'cancelled');
+  const todays = live.filter(b => b.date === today).length;
+  const open = live.filter(b => (b.stage ?? 0) < 3).length;
+  const pending = live.filter(b => b.paymentStatus === 'pending');
+  const pendingAmt = pending.reduce((s,b)=> s + (b.bill ? b.bill.total : 0), 0);
+  const paid = live.filter(b => b.paymentStatus === 'confirmed');
+  const revenue = paid.reduce((s,b)=> s + paidAmt(b), 0);
+  const revToday = paid.filter(b => b.paidAtTs && localDateStr(new Date(b.paidAtTs)) === today)
+                       .reduce((s,b)=> s + paidAmt(b), 0);
+  const rated = live.filter(b => b.rating);
+  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0) / rated.length) : 0;
+  const cancelled = allBookings.length - live.length;
+
+  $('stats').innerHTML = `
+    <div class="stat"><div class="label">Today's bookings</div><div class="value">${todays}</div><div class="note">${live.length} total · ${cancelled} cancelled</div></div>
+    <div class="stat"><div class="label">Open jobs</div><div class="value">${open}</div><div class="note">not yet completed</div></div>
+    <div class="stat warn"><div class="label">Pending payments</div><div class="value">${pending.length}</div><div class="note">${money(pendingAmt)} waiting for you to confirm</div></div>
+    <div class="stat money"><div class="label">Revenue today</div><div class="value">${money(revToday)}</div><div class="note">confirmed payments</div></div>
+    <div class="stat money"><div class="label">Total revenue</div><div class="value">${money(revenue)}</div><div class="note">${paid.length} paid invoices</div></div>
+    <div class="stat"><div class="label">Average rating</div><div class="value">${rated.length ? avg.toFixed(1) + ' ★' : '—'}</div><div class="note">${rated.length} review${rated.length === 1 ? '' : 's'}</div></div>
+  `;
+
+  // last 7 days revenue bars
+  const days = [];
+  for(let i = 6; i >= 0; i--){
+    const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - i);
+    days.push({ key: localDateStr(d), label: d.toLocaleDateString('en-IN', { weekday:'short' }), total: 0 });
+  }
+  paid.forEach(b=>{
+    if(!b.paidAtTs) return;
+    const k = localDateStr(new Date(b.paidAtTs));
+    const day = days.find(x => x.key === k);
+    if(day) day.total += paidAmt(b);
+  });
+  const max = Math.max(...days.map(d => d.total), 1);
+  $('bars').innerHTML = days.map(d => `
+    <div class="bar-col" title="${esc(d.key)}: ${money(d.total)}">
+      <div class="bar-val">${d.total ? money(d.total) : ''}</div>
+      <div class="bar" style="height:${Math.round((d.total / max) * 80)}px;"></div>
+      <div class="bar-day">${esc(d.label)}</div>
+    </div>`).join('');
+}
+
+/* ---------------- booking cards ---------------- */
+function cardHtml(b){
+  const id = esc(b.id);
+  const stage = b.stage ?? 0;
+  const isFinal = stage >= STAGES.length - 1;
+  const cancelled = b.status === 'cancelled';
+  const items = b.items || [];
+  const bill = b.bill || { total: 0, needsItems: false };
+  const payStatus = b.paymentStatus || 'unpaid';
+  const locked = cancelled || payStatus === 'confirmed';   // bill can't be edited any more
+
+  const itemsHtml = items.map((it, idx)=>`
+    <div class="item-row">
+      <span>${esc(it.name)}<span class="tag">(${it.type === 'part' ? 'Part' : 'Service'})</span></span>
+      <span style="display:flex;align-items:center;gap:8px;">${money(it.amount)}
+        ${locked ? '' : `<button class="rm" onclick="removeItem('${id}', ${idx})" title="Remove">✕</button>`}
+      </span>
+    </div>`).join('');
+
+  let totalHtml;
+  if(bill.needsItems) totalHtml = `<div class="item-total" style="color:var(--gold);">Bill not ready — add the parts / services used</div>`;
+  else totalHtml = `<div class="item-total">${payStatus === 'confirmed' ? 'Billed' : 'Estimated'} total: ${money(bill.total)} (incl. 18% GST)</div>`;
+
+  let payHtml;
+  if(cancelled){
+    payHtml = `<div class="pay-row"><span class="pay-status">Booking cancelled — no payment due</span></div>`;
+  }else if(payStatus === 'confirmed'){
+    payHtml = `<div class="pay-row"><span class="pay-status confirmed">✅ Paid ${money(paidAmt(b))} via ${esc(payLabel(b))} · ${esc(b.invoiceNo || b.receiptNo || '')}</span></div>`;
+  }else if(payStatus === 'pending'){
+    payHtml = `<div class="pay-row">
+      <span class="pay-status pending">💳 Payment requested — ${money(bill.total)} via ${esc(payLabel(b))}</span>
+      <button class="btn btn-teal" onclick="confirmPayment('${id}')">Confirm payment ✓</button>
+    </div>`;
+  }else{
+    payHtml = `<div class="pay-row"><span class="pay-status">No payment requested yet</span></div>`;
+  }
+
+  let extra = '';
+  if(b.deliveryMode){
+    extra += `<p>Return: ${b.deliveryMode === 'driver' ? 'Driver delivery' : 'Customer collects'}${b.deliveryAddr ? ' · ' + esc(b.deliveryAddr) : ''}</p>`;
+  }
+
+  let feedbackHtml = '';
+  if(b.rating){
+    feedbackHtml = `
+      <div class="section">
+        <div class="section-title">Customer feedback</div>
+        <div class="fb-stars">${'★'.repeat(b.rating)}${'☆'.repeat(5 - b.rating)}</div>
+        ${b.feedback ? `<div class="fb-text">“${esc(b.feedback)}”</div>` : ''}
+      </div>`;
+  }
+
+  const addForm = locked ? '' : `
+        <div class="item-form">
+          <select id="ipart-${id}" onchange="pickPart('${id}')" style="flex:2;min-width:180px;"><option value="">Pick a part from stock…</option>${PARTS.map(p => `<option value="${esc(p.id)}" ${p.stock < 1 ? 'disabled' : ''} ${pickedPart[b.id] === p.id ? 'selected' : ''}>${esc(p.name)} — ${money(p.price)} (${p.stock} in stock)</option>`).join('')}</select>
+          <input type="text" name="iname" placeholder="Item name (e.g. Brake pad)" id="iname-${id}" maxlength="80">
+          <input type="number" name="iamount" placeholder="₹ amount" id="iamount-${id}" min="1">
+          <select id="itype-${id}">
+            <option value="service">Service</option>
+            <option value="part">Part</option>
+          </select>
+          <button class="btn" onclick="addItem('${id}')">+ Add</button>
+        </div>`;
+
+  const stageControl = cancelled
+    ? `<div class="stage-pill cancelled">Cancelled</div>`
+    : `<div class="stage-pill ${isFinal ? 'final' : ''}">${esc(STAGES[stage])}</div><br>
+       <button class="btn" ${isFinal ? 'disabled' : ''} onclick="advance('${id}', ${stage + 1})">${isFinal ? 'Completed' : 'Mark next stage →'}</button>`;
+
+  return `
+  <div class="card ${cancelled ? 'cancelled' : ''}">
+    <div class="card-top">
+      <div class="info">
+        <h3>${esc(b.name || 'Unknown')} · ${esc(b.vehicleNo || '')}</h3>
+        <p>${esc(b.serviceType || '')} — ${esc(b.date || '')} ${esc(b.time || '')}</p>
+        <p>Drop-off: ${b.dropMode === 'driver' ? 'Driver pickup' : 'Self drop-off'}${b.pickupAddr ? ' · ' + esc(b.pickupAddr) : ''}</p>
+        ${extra}
+        <p class="id">Ticket ${id} · ${esc(b.phone || '')}</p>
+      </div>
+      <div class="stagebox">${stageControl}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Service &amp; Parts History</div>
+      ${itemsHtml || '<div style="font-size:12px;color:var(--muted);">No items added yet.</div>'}
+      ${totalHtml}
+      ${addForm}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Payment</div>
+      ${payHtml}
+    </div>
+    ${feedbackHtml}
+    <div class="card-foot"><button class="btn btn-danger" onclick="removeBooking('${id}')">🗑 Delete booking</button></div>
+  </div>`;
+}
+
+function render(){
+  const box = $('list');
+  if(!allBookings.length){
+    $('resultCount').textContent = '';
+    box.innerHTML = '<div class="empty">No appointments yet. Once a customer books a service, it will appear here.</div>';
+    return;
+  }
+  const list = allBookings.filter(matches).sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+  $('resultCount').textContent = `Showing ${list.length} of ${allBookings.length} booking${allBookings.length === 1 ? '' : 's'}`;
+  if(!list.length){
+    box.innerHTML = '<div class="empty">No bookings match these filters.</div>';
+    return;
+  }
+  box.innerHTML = list.map(cardHtml).join('');
+}
+
+/* ---------------- actions ---------------- */
+const bUrl = (id, tail) => '/api/booking/' + encodeURIComponent(id) + (tail || '');
+
+function advance(id, nextStage){
+  act(() => postApi(bUrl(id, '/stage'), { stage: nextStage }));
+}
+function addItem(id){
+  const nameEl = $('iname-'+id), amtEl = $('iamount-'+id), typeEl = $('itype-'+id);
+  const name = nameEl.value.trim();
+  const amount = amtEl.value;
+  if(!name || !amount){ alert('Enter both item name and amount.'); return; }
+  act(async () => {
+    await postApi(bUrl(id, '/items'), { name, amount, type: typeEl.value, partId: pickedPart[id] || undefined });
+    delete pickedPart[id];
+    nameEl.value = '';
+    amtEl.value = '';
+  });
+}
+function pickPart(id){
+  const p = PARTS.find(x => x.id === $('ipart-'+id).value);
+  pickedPart[id] = p ? p.id : '';
+  if(p){ $('iname-'+id).value = p.name; $('iamount-'+id).value = p.price; $('itype-'+id).value = 'part'; }
+}
+function removeItem(id, index){
+  act(() => postApi(bUrl(id, '/items/remove'), { index }));
+}
+function confirmPayment(id){
+  act(() => postApi(bUrl(id, '/confirm-payment')));
+}
+function removeBooking(id){
+  if(!confirm('Delete this booking permanently? This cannot be undone.')) return;
+  act(() => api(bUrl(id), { method:'DELETE' }));
+}
+
+/* ---------------- start ---------------- */
+if(token) startApp(); else showLogin();
+</script>
+</body>
+</html>

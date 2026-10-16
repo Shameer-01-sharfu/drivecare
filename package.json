@@ -1,0 +1,18 @@
+{
+  "name": "drivecare-app",
+  "version": "2.0.0",
+  "description": "DriveCare - Vehicle Service Center Management (customer app + admin dashboard)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
