@@ -125,8 +125,21 @@ let saveChain = Promise.resolve();
 async function initStorage() {
   if (!MONGODB_URI) { console.log('Storage: JSON file (' + DB_FILE + ') - set MONGODB_URI to use MongoDB Atlas'); return; }
   const { MongoClient } = require('mongodb');
-  const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
-  await client.connect();
+  const connect = async () => {
+    const c = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
+    await c.connect();
+    return c;
+  };
+  let client;
+  try {
+    client = await connect();
+  } catch (e) {
+    if (!/querySrv|ENOTFOUND|ECONNREFUSED|ETIMEOUT/.test(e.message)) throw e;
+    // some routers / ISPs refuse the SRV DNS lookup that Atlas needs - retry through public DNS servers
+    console.log('DNS lookup failed (' + e.message + ') - retrying with Google / Cloudflare DNS...');
+    require('dns').setServers(['8.8.8.8', '1.1.1.1']);
+    client = await connect();
+  }
   mongoCol = client.db(process.env.MONGODB_DB || 'drivecare').collection('state');
   const doc = await mongoCol.findOne({ _id: 'main' });
   if (doc) { delete doc._id; cache = migrate(doc); }
